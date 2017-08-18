@@ -9,7 +9,7 @@
 
 ;-------------------------  MACRO #1  ----------------------------------
 ;Macro-1: impr_texto.
-;	
+;	Imprime un mensaje que se pasa como parametro
 ;	Recibe 2 parametros de entrada:
 ;		%1 es la direccion del texto a imprimir
 ;		%2 es la cantidad de bytes a imprimir
