@@ -1,0 +1,1100 @@
+;######################## SEGMENTO DE MACROS ###########################
+;Las macros, son funciones que reciben parametros de entrada y ejecutan
+;acciones sobre esos parametros.
+;Se debe indicar el numero de parametros de entrada y ejecutar las
+;operaciones en la macro. Luego, se puede llamar la macro desde el
+;programa principal
+
+;Ejemplos de Macros:
+
+;-------------------------  MACRO #1  ----------------------------------
+;Macro-1: impr_texto.
+;	Imprime un mensaje que se pasa como parametro
+;	Recibe 2 parametros de entrada:
+;		%1 es la direccion del texto a imprimir
+;		%2 es la cantidad de bytes a imprimir
+;-----------------------------------------------------------------------
+%macro impr_texto 2 	;recibe 2 parametros
+	mov rax,1	;sys_write
+	mov rdi,1	;std_out
+	mov rsi,%1	;primer parametro: Texto
+	mov rdx,%2	;segundo parametro: Tamano texto
+	syscall
+%endmacro
+;------------------------- FIN DE MACRO --------------------------------
+
+;-------------------------  MACRO #2  ----------------------------------
+;Macro-2: impr_linea.
+;	Imprime un mensaje que se pasa como parametro y un salto de linea
+;	Recibe 2 parametros de entrada:
+;		%1 es la direccion del texto a imprimir
+;		%2 es la cantidad de bytes a imprimir
+;-----------------------------------------------------------------------
+%macro impr_linea 2 	;recibe 2 parametros
+	mov rax,1	;sys_write
+	mov rdi,1	;std_out
+	mov rsi,%1	;primer parametro: Texto
+	mov rdx,%2	;segundo parametro: Tamano texto
+	syscall
+  mov rax,1	;sys_write
+	mov rdi,1	;std_out
+	mov rsi,cons_nueva_linea	;primer parametro: Texto
+	mov rdx,1	;segundo parametro: Tamano texto
+	syscall
+%endmacro
+;------------------------- FIN DE MACRO --------------------------------
+
+;-------------------------  MACRO #3  ----------------------------------
+%macro trad 3 	;recibe q parametros (binario 16bits)
+	lea ebx,%3
+	;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+	mov rax,%1
+	xlat
+	;El resultado se guarda en "out"
+	mov [%2],ax
+%endmacro
+;------------------------- FIN DE MACRO --------------------------------
+
+;********************************************************************************
+%macro hex_a_dec 1
+;Limpiamos r10 y lo cargamos con el digito hex que queremos imprimir
+xor r10,r10
+mov r10,%1
+
+;Ahora se limpia r11 y se carga con un valor de 10.
+xor r11,r11
+mov r11,0xA
+
+;Comparamos r10 con r11
+cmp r10,r11
+;Si r10 es mayor que r11, entonces se deben imprimir 2 digitos
+jge mayor_que_10
+;Si es menor, simplemente hacemos el lookup con XLAT e imprimimos.
+lea ebx,[tabla]
+mov al,r10b
+xlat
+mov [valor_dec],ax
+impr_texto valor_dec,1
+jmp final_de_macro
+mayor_que_10:
+;Como es mayor que 10, tenemos que empezar por imprimir un 1.
+impr_texto cons_diez,1
+;Ahora, le restamos 10 al valor de r10
+sub r10,0xA
+;Y ya con el valor actualizado en r10, hacemos el lookup y lo imprimimos
+lea ebx,[tabla]
+mov al,r10b
+xlat
+mov [valor_dec],1
+impr_texto valor_dec,1
+final_de_macro:
+%endmacro
+;********************************************************************************
+
+
+;===================================================================================
+;Segmento de datos
+;Declaracion de variables estaticas (ubicadas en memoria)
+;section .bss
+
+section .data
+	cons_diez: db '1'
+  cons_nueva_linea: db 0xa
+  tabla: db "0123456789ABCDEF",0
+  cons_hex_header: db ' 0x'
+  cons_tam_hex_header: equ $-cons_hex_header
+  cons_resultado: db 'Resultado: '
+  cons_tam_resultado: equ $-cons_resultado
+  cons_ramtotal: db 'Tamaño total de RAM: '
+  cons_tam_ramtotal: equ $-cons_ramtotal
+	cons_ramdispo: db 'RAM disponible: '
+  cons_tam_ramdispo: equ $-cons_ramdispo
+	cons_ramcomp: db 'RAM compartida: '
+  cons_tam_ramcomp: equ $-cons_ramcomp
+	cons_segdini: db 'Segundos desde el inicio: '
+  cons_tam_segdini: equ $-cons_segdini
+	cons_memexto: db 'Memoria extendida total: '
+  cons_tam_memexto: equ $-cons_memexto
+	cons_memexdi: db 'Memoria extendida disponible: '
+  cons_tam_memexdi: equ $-cons_memexdi
+	cons_unimeto: db 'Tamaño de la unidad de memoria: '
+  cons_tam_unimeto: equ $-cons_unimeto
+	cons_cpu1m: db 'Carga CPU último minuto: '
+  cons_tam_cpu1m: equ $-cons_cpu1m
+	cons_cpu5m: db 'Carga CPU últimos 5 minutos: '
+  cons_tam_cpu5m: equ $-cons_cpu5m
+	cons_cpu15m: db 'Carga CPU últimos 15 minutos: '
+  cons_tam_cpu15m: equ $-cons_cpu15m
+	cons_swap: db 'Memoria SWAP total: '
+	cons_tam_swap: equ $-cons_swap
+	cons_swapdis: db 'Memoria SWAP disponible: '
+	cons_tam_swapdis: equ $-cons_swapdis
+	cons_membuf: db 'Memoria usada en buffers: '
+	cons_tam_membuf: equ $-cons_membuf
+	cons_proce: db 'Procesos en ejecución: '
+	cons_tam_proce: equ $-cons_proce
+	cons_nucleos: db 'Cantidad de núcleos '
+	cons_tam_nucleos: equ $-cons_nucleos
+	cons_eaxb1: db 'Bloque 1 (MSB eax): '
+	cons_tam_eaxb1: equ $-cons_eaxb1
+	cons_eaxb2: db 'Bloque 2: '
+	cons_tam_eaxb2: equ $-cons_eaxb2
+	cons_eaxb3: db 'Bloque 3: '
+	cons_tam_eaxb3: equ $-cons_eaxb3
+	cons_eaxb4: db 'Bloque 4 (LSB eax): '
+	cons_tam_eaxb4: equ $-cons_eaxb4
+	cons_eax: db 'Datos del registro eax'
+	cons_tam_eax: equ $-cons_eax
+	cons_ebxb1: db 'Bloque 1 (MSB ebx): '
+	cons_tam_ebxb1: equ $-cons_ebxb1
+	cons_ebxb2: db 'Bloque 2: '
+	cons_tam_ebxb2: equ $-cons_ebxb2
+	cons_ebxb3: db 'Bloque 3: '
+	cons_tam_ebxb3: equ $-cons_ebxb3
+	cons_ebxb4: db 'Bloque 4 (LSB ebx): '
+	cons_tam_ebxb4: equ $-cons_ebxb4
+	cons_ebx: db 'Datos del registro ebx'
+	cons_tam_ebx: equ $-cons_ebx
+	cons_ecxb1: db 'Bloque 1 (MSB ecx): '
+	cons_tam_ecxb1: equ $-cons_ecxb1
+	cons_ecxb2: db 'Bloque 2: '
+	cons_tam_ecxb2: equ $-cons_ecxb2
+	cons_ecxb3: db 'Bloque 3: '
+	cons_tam_ecxb3: equ $-cons_ecxb3
+	cons_ecxb4: db 'Bloque 4 (LSB ecx): '
+	cons_tam_ecxb4: equ $-cons_ecxb4
+	cons_ecx: db 'Datos del registro ecx'
+	cons_tam_ecx: equ $-cons_ecx
+	cons_edxb1: db 'Bloque 1 (MSB edx): '
+	cons_tam_edxb1: equ $-cons_edxb1
+	cons_edxb2: db 'Bloque 2: '
+	cons_tam_edxb2: equ $-cons_edxb2
+	cons_edxb3: db 'Bloque 3: '
+	cons_tam_edxb3: equ $-cons_edxb3
+	cons_edxb4: db 'Bloque 4 (LSB edx): '
+	cons_tam_edxb4: equ $-cons_edxb4
+	cons_edx: db 'Datos del registro edx'
+	cons_tam_edx: equ $-cons_edx
+	cons_cache: db '              CACHÉ INFO'
+	cons_tam_cache: equ $-cons_cache
+	cons_fabricante: db 'Fabricante: '
+	cons_tam_fabricante: equ $-cons_fabricante
+	cons_stepping: db 'Stepping - Numero revision: '
+	cons_tam_stepping: equ $-cons_stepping
+	cons_modelo: db 'Modelo: '
+	cons_tam_modelo: equ $-cons_modelo
+	cons_familia: db 'Familia: '
+	cons_tam_familia: equ $-cons_familia
+	cons_tipo_cpu: db 'Tipo de procesador: '
+	cons_tam_tipo_cpu: equ $-cons_tipo_cpu
+	cons_modelo_ext: db 'Modelo extendido: '
+	cons_tam_modelo_ext: equ $-cons_modelo_ext
+	cons_pro: db '              CPU INFO'
+	cons_tam_pro: equ $-cons_pro
+	cons_sysin: db '              SYSTEM INFO '
+	cons_tam_sysin: equ $-cons_sysin
+	cons_memo: db '              MEMORIA INFO '
+	cons_tam_memo: equ $-cons_memo
+	nombre_archivo: db '/sys/block/sda/size',0
+	tam_nombre_archivo: equ $-nombre_archivo
+	cons_disco: db 'Tamaño del disco duro [Blocks]: '
+	cons_tam_disco: equ $-cons_disco
+	cons_tec: db '			Tecnológico de Costa Rica'
+	cons_tam_tec: equ $-cons_tec
+	cons_curso: db '	EL-4313 Laboratorio de Estructuras y Microprocesadores'
+	cons_tam_curso: equ $-cons_curso
+	cons_nombres: db '	 Arias G.	Benavides Y.	Lee K.	 Varela B.'
+	cons_tam_nombres: equ $-cons_nombres
+
+
+section .bss
+	contenido_archivo: resb 15
+	valor_hex: resb 1
+	valor_dec: resb 2
+	serial: resb 16
+  resultado: resb	216
+	out: resb 1
+	fabricante_id:       resd	12	 ;Identificacion del fabricante (vendor) [12 Double]
+;  version:		resd	4            ;Version
+	;features:	resd	4              ;Features o funcionalidades
+	;stepping: resb 1
+	un_byte: resb 1
+;  i		resd	4
+;  curfeat		resd	4
+
+;===================================================================================
+
+
+;===================================================================================
+;Segmento de codigo
+section .text
+    global _start
+
+;------------------------------Inicio de codigo-------------------------------------
+_start:
+
+;---------------------------------------------------------------------------
+			impr_linea cons_tec,cons_tam_tec
+			impr_linea cons_curso,cons_tam_curso
+			impr_linea cons_nombres,cons_tam_nombres
+			;Serial del CPU y Frecuencia de operacion
+			mov eax,0x80000002
+			cpuid
+			mov [serial],eax
+			mov [serial+4],ebx
+			mov [serial+8],ecx
+			mov [serial+12],edx
+			impr_linea cons_pro,cons_tam_pro
+			impr_texto serial, 16
+
+			mov eax,0x80000003
+			cpuid
+			mov [serial],eax
+			mov [serial+4],ebx
+			mov [serial+8],ecx
+			mov [serial+12],edx
+			impr_texto serial, 16
+
+			mov eax,0x80000004
+			cpuid
+			mov [serial],eax
+			mov [serial+4],ebx
+			mov [serial+8],ecx
+			mov [serial+12],edx
+			impr_linea serial, 16
+
+;----------------------------------------------------------
+						;EAX = 4 CPUID # of cores
+						mov ecx,0x0
+						mov eax,0x4
+						cpuid
+						mov r10,rax
+
+						mov r8,r10
+						shr r8,26
+						and r8,0x3F
+
+						add r8,0x1
+						_break8:
+						mov r11,r8
+						and r11,0x00000030
+						shr r11,4
+						trad r11,out,[tabla]
+						impr_texto cons_nucleos,cons_tam_nucleos
+						;impr_texto out,1
+
+						and r8,0x0000000F
+						trad r8,out,[tabla]
+						impr_linea out,1
+
+;---------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;Primera parte: Identificacion del fabricante
+mov eax,0 ;Cargando EAX=0: Leer la identificacion del fabricante
+cpuid     ;Llamada a CPUID
+;El ID de fabricante se compone de 12 bytes que se almacenan en este orden:
+;          1) Primeros 4 bytes en EBX
+;          2) Siguientes 4 bytes en EDX
+;          3) Ultimos 4 bytes en ECX
+          mov [fabricante_id],ebx
+          mov [fabricante_id+4],edx
+          mov [fabricante_id+8],ecx
+;Ahora se imprime el ID del fabricante usando la macro impr_linea
+				impr_texto cons_fabricante,cons_tam_fabricante
+        impr_linea fabricante_id,12
+;-------------------------------------------------------------------------------
+
+;-------------------------------------------------------------------------------
+;Segunda parte: Version del procesador
+;La version del procesador se conforma por:
+;     * Stepping o numero de revision
+;     * Model o modelo del procesador
+;			* Familia del procesador
+;			* Tipo del procesador
+;			* Modelo extendido
+;			* Familia extendido
+; NOTA: Cada uno de estos valores se lee como un numero y tienen diferente
+; significado dependiendo del fabricante. En este ejercicio solamente se
+; recuperan los valores numericos y se muestran al usuario
+; Para recuperar los valores, se llama CPUID con EAX=1
+;mov eax,1 ;Cargando EAX=1: Leer informacion y features del CPU
+;cpuid
+;Las funcionalidades del procesador se retornan en EAX con este formato:
+; EAX = 0xHGFEDCBA (Cada letra representa 4 bits)
+; Donde:
+;			A = Stepping
+;			B = Model
+;			C = Familia
+;			D = Tipo
+;			E = Modelo extendido
+;			F = Familia extendida
+;			G-H = No se utilizan
+
+
+;Primero se calcula el stepping (Nibble menos significativo)
+			;Llamar a CPUID con EAX=1 para solicitar los features del CPU
+			mov eax,1
+			cpuid
+			;R8 se usa como referencia con el valor precargado. No debe sobre-escribirse
+			mov r8,rax
+			;Imprimir los encabezados
+			impr_texto cons_stepping,cons_tam_stepping
+			impr_texto cons_hex_header,cons_tam_hex_header
+			;EAX se va a copiar a EDX para poder hacer calculos sin perder los datos de EAX
+			mov edx,eax
+			;Nos interesa el nibble mas bajo de EDX (Stepping) - Se filtra con una mascara
+			and edx,0x000F
+			;Se carga la tabla de referencia para imprimir hexadecimales en EBX
+			lea ebx,[tabla]
+			;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+			mov al,dl
+			xlat
+			;El resultado se guarda en "un_byte"
+			mov [un_byte],ax
+			;Ahora, en un_byte esta el caracter ASCII correspondiente al hexadecimal a imprimir
+			impr_linea un_byte,1
+
+;Ahora se pasa a calcular el modelo (Segundo nibble menos significativo)
+			;Imprimir los encabezados
+			impr_texto cons_modelo,cons_tam_modelo
+			impr_texto cons_hex_header,cons_tam_hex_header
+			;Se recuperan los valores de CPUID
+			mov rax,r8
+			mov edx,eax
+			;Nos interesa el segundo nibble mas bajo de EDX (Modelo) - Se filtra con una mascara
+			;y con un corrimiento (shift) a la derecha por 4 bits
+			and edx,0x00F0
+			shr edx,4
+			;Se carga la tabla de referencia para imprimir hexadecimales en EBX
+			lea ebx,[tabla]
+			;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+			mov al,dl
+			xlat
+			;El resultado se guarda en "un_byte"
+			mov [un_byte],ax
+			;Ahora, en un_byte esta el caracter ASCII correspondiente al hexadecimal a imprimir
+			impr_linea un_byte,1
+
+;Ahora se pasa a calcular la Familia (Tercer nibble)
+			;Imprimir los encabezados
+			impr_texto cons_familia,cons_tam_familia
+			impr_texto cons_hex_header,cons_tam_hex_header
+			;Se recuperan los valores de CPUID
+			mov rax,r8
+			mov edx,eax
+			;Nos interesa el tercer nibble mas bajo de EDX (Modelo) - Se filtra con una mascara
+			;y con un corrimiento (shift) a la derecha por 8 bits
+			and edx,0x0F00
+			shr edx,8
+			;Se carga la tabla de referencia para imprimir hexadecimales en EBX
+			lea ebx,[tabla]
+			;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+			mov al,dl
+			xlat
+			;El resultado se guarda en "un_byte"
+			mov [un_byte],ax
+			;Ahora, en un_byte esta el caracter ASCII correspondiente al hexadecimal a imprimir
+			impr_linea un_byte,1
+
+;Ahora se pasa a calcular el tipo de procesador
+			;Imprimir los encabezados
+			impr_texto cons_tipo_cpu,cons_tam_tipo_cpu
+			impr_texto cons_hex_header,cons_tam_hex_header
+			;Se recuperan los valores de CPUID
+			mov rax,r8
+			mov edx,eax
+			;Nos interesa el cuarto nibble mas bajo de EDX (Tipo) - Se filtra con una mascara
+			;y con un corrimiento (shift) a la derecha por 12 bits
+			and edx,0xF000
+			shr edx,12
+			;Se carga la tabla de referencia para imprimir hexadecimales en EBX
+			lea ebx,[tabla]
+			;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+			mov al,dl
+			xlat
+			;El resultado se guarda en "un_byte"
+			mov [un_byte],ax
+			;Ahora, en un_byte esta el caracter ASCII correspondiente al hexadecimal a imprimir
+			impr_linea un_byte,1
+
+;Finalmente, se calcula el modelo extendido del procesador
+			;Imprimir los encabezados
+			impr_texto cons_modelo_ext,cons_tam_modelo_ext
+			impr_texto cons_hex_header,cons_tam_hex_header
+			;Se recuperan los valores de CPUID
+			mov rax,r8
+			;Para poder trabajar el 5to nibble, es necesario hacer un corrimiento a RAX
+			;antes de procesarlo con las mascaras en EDX
+			shr rax,4
+			mov edx,eax
+			;Nos interesa el cuarto nibble de EDX (Modelo Ext) - Se filtra con una mascara
+			;y con un corrimiento (shift) a la derecha por 12 bits
+			and edx,0xF000
+			shr edx,12
+			;Se carga la tabla de referencia para imprimir hexadecimales en EBX
+			lea ebx,[tabla]
+			;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+			mov al,dl
+			xlat
+			;El resultado se guarda en "un_byte"
+			mov [un_byte],ax
+			;Ahora, en un_byte esta el caracter ASCII correspondiente al hexadecimal a imprimir
+			impr_linea un_byte,1
+
+;Segunda parte: sysinfo
+
+
+			;Llamar a sysinfo con EAX=63 para solicitar informaion del sistema
+			mov rdi,resultado
+			mov rax,0x63 ;system sysinfo
+			syscall
+
+
+			;---- con info en resultado se procede a enmascarar los datos y presentarlos en pantalla
+
+			;--- uptime en segundos
+			mov r8,[resultado]
+			_break:
+			shr r8,28
+			and r8,0xF
+			;******************************************
+			;hex_a_dec r8
+			;*******************************************
+			trad r8,out,[tabla]
+			impr_linea cons_sysin,cons_tam_sysin
+			impr_texto cons_segdini,cons_tam_segdini
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,[resultado]
+			shr r8,24
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de uptime
+
+			;---load en 1 min
+			mov r8,[resultado+8]
+			shr r8,28
+			and r8,0xF
+
+			trad r8,out,[tabla]
+		  impr_texto cons_cpu1m,cons_tam_cpu1m
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0xF000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+8]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de load
+
+			;---------------------------------------------------------------------------
+			;Memoria Externa
+			impr_linea cons_memo,cons_tam_memo
+			impr_texto cons_disco,cons_tam_disco
+			mov ebx,nombre_archivo
+			mov eax,5
+			mov ecx,0
+			int 80h
+
+			mov eax,3
+			mov ebx,eax
+			mov ecx,contenido_archivo
+			mov edx,15
+			int 80h
+
+			mov eax,4
+			mov ebx,1
+			mov ecx,contenido_archivo
+			int 80h
+
+;-------------------------------------------------
+
+		;---total de ram-----------------------------------------
+			mov r8,[resultado+36]
+			and r8,0x0000000F
+			trad r8,out,[tabla]
+			impr_texto cons_ramtotal,cons_tam_ramtotal
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			xor r8,r8
+			mov r8,[resultado+32]
+			_break05:
+			shr r8,28
+			and r8,0x0000000F
+			trad r8,out,[tabla]
+			impr_texto out,1
+			_break02:
+
+			mov r8,[resultado+32]
+			and r8,0xF000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+32]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+32]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+32]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+32]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado+32]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+32]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de total de ram
+
+			;---ram disponible
+			mov r8,[resultado+40]
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_texto cons_ramdispo,cons_tam_ramdispo
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0xF000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+40]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de ram disponible
+
+			;---ram compartida
+			mov r8,[resultado+48]
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_texto cons_ramcomp,cons_tam_ramcomp
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0xF000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+48]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de ram compartida
+
+			;---memoria en buffers
+			mov r8,[resultado+56]
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_texto cons_membuf,cons_tam_membuf
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0xF000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+56]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de memoria usada en buffers
+
+			;---procesos en ejecución
+			mov r8,[resultado+80]
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_texto cons_proce,cons_tam_proce
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0xF000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0xF00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0xF0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0x0F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0x00F00
+			shr r8,8
+			trad r8,out,[tabla]
+			;Imprimir los encabezados
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0x000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto out,1
+
+			mov r8,[resultado+80]
+			and r8,0x0000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+			;---fin de procesos en ejecución
+
+;--------------------------CACHE---------------------------------
+			;EAX = 2 CPUID Data cache
+			mov eax,2
+			cpuid
+			_break5:
+			mov r10,rax
+			mov r14,rbx
+			mov r12,rcx
+			mov r13,rdx
+;--------------------- registro eax --------------------
+			mov r8,r10
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_linea cons_cache,cons_tam_cache
+			impr_linea cons_eax,cons_tam_eax
+			impr_texto cons_eaxb1,cons_tam_eaxb1
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r10
+			shr r8,24
+			and r8,0x0F
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r10
+			and r8,0x00F00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto cons_eaxb2,cons_tam_eaxb2
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r10
+			and r8,0x000F0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r10
+			and r8,0x0000F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto cons_eaxb3,cons_tam_eaxb3
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r10
+			and r8,0x00000F00
+			shr r8,8
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r10
+			and r8,0x000000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto cons_eaxb4,cons_tam_eaxb4
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r10
+			and r8,0x0000000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+;----------------------- registro ebx -----------------------
+			mov r8,r14
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_linea cons_ebx,cons_tam_ebx
+			impr_texto cons_ebxb1,cons_tam_ebxb1
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r14
+			and r8,0x0F000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r14
+			and r8,0x00F00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto cons_ebxb2,cons_tam_ebxb2
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r14
+			and r8,0x000F0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r14
+			and r8,0x0000F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto cons_ebxb3,cons_tam_ebxb3
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r14
+			and r8,0x00000F00
+			shr r8,8
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r14
+			and r8,0x000000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto cons_ebxb4,cons_tam_ebxb4
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r14
+			and r8,0x0000000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+;----------------------- registro ecx -----------------------
+			mov r8,r12
+			shr r8,28
+			and r8,0xF
+			trad r8,out,[tabla]
+			impr_linea cons_ecx,cons_tam_ecx
+			impr_texto cons_ecxb1,cons_tam_ecxb1
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r12
+			and r8,0x0F000000
+			shr r8,24
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r12
+			and r8,0x00F00000
+			shr r8,20
+			trad r8,out,[tabla]
+			impr_texto cons_ecxb2,cons_tam_ecxb2
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r12
+			and r8,0x000F0000
+			shr r8,16
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r12
+			and r8,0x0000F000
+			shr r8,12
+			trad r8,out,[tabla]
+			impr_texto cons_ecxb3,cons_tam_ecxb3
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r12
+			and r8,0x00000F00
+			shr r8,8
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+			mov r8,r12
+			and r8,0x000000F0
+			shr r8,4
+			trad r8,out,[tabla]
+			impr_texto cons_ecxb4,cons_tam_ecxb4
+			impr_texto cons_hex_header,cons_tam_hex_header
+			impr_texto out,1
+
+			mov r8,r12
+			and r8,0x0000000F
+			trad r8,out,[tabla]
+			impr_linea out,1
+
+;----------------------- registro edx -----------------------
+						mov r8,r13
+						shr r8,28
+						and r8,0xF
+						trad r8,out,[tabla]
+						impr_linea cons_edx,cons_tam_edx
+						impr_texto cons_edxb1,cons_tam_edxb1
+						impr_texto cons_hex_header,cons_tam_hex_header
+						impr_texto out,1
+
+						mov r8,r13
+						and r8,0x0F000000
+						shr r8,24
+						trad r8,out,[tabla]
+						impr_linea out,1
+
+						mov r8,r13
+						and r8,0x00F00000
+						shr r8,20
+						trad r8,out,[tabla]
+						impr_texto cons_edxb2,cons_tam_edxb2
+						impr_texto cons_hex_header,cons_tam_hex_header
+						impr_texto out,1
+
+						mov r8,r13
+						and r8,0x000F0000
+						shr r8,16
+						trad r8,out,[tabla]
+						impr_linea out,1
+
+						mov r8,r13
+						and r8,0x0000F000
+						shr r8,12
+						trad r8,out,[tabla]
+						impr_texto cons_edxb3,cons_tam_edxb3
+						impr_texto cons_hex_header,cons_tam_hex_header
+						impr_texto out,1
+
+						mov r8,r13
+						and r8,0x00000F00
+						shr r8,8
+						trad r8,out,[tabla]
+						impr_linea out,1
+
+						mov r8,r13
+						and r8,0x000000F0
+						shr r8,4
+						trad r8,out,[tabla]
+						impr_texto cons_edxb4,cons_tam_edxb4
+						impr_texto cons_hex_header,cons_tam_hex_header
+						impr_texto out,1
+						mov r8,r13
+						and r8,0x0000000F
+						trad r8,out,[tabla]
+						impr_linea out,1
+
+
+;**************************************************************************
+
+
+;===================================================================================
+;Finalizacion del programa. Devolver condiciones para evitar un segmentation fault
+  mov	eax,1	;(sys_exit)
+	mov	ebx,0	;exit status 0
+	int	0x80	;llamar al sistema
+;===================================================================================

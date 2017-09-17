@@ -1,0 +1,400 @@
+;-------------------------  MACRO #1  ----------------------------------
+;Macro-1: impr_texto.
+;	Imprime un mensaje que se pasa como parametro
+;	Recibe 2 parametros de entrada:
+;		%1 es la direccion del texto a imprimir
+;		%2 es la cantidad de bytes a imprimir
+;-----------------------------------------------------------------------
+%macro impr_texto 2 	;recibe 2 parametros
+	mov rax,1	;sys_write
+	mov rdi,1	;std_out
+	mov rsi,%1	;primer parametro: Texto
+	mov rdx,%2	;segundo parametro: Tamano texto
+	syscall
+%endmacro
+;------------------------- FIN DE MACRO --------------------------------
+
+;-------------------------  MACRO #2  ----------------------------------
+;Macro-2: impr_linea.
+;	Imprime un mensaje que se pasa como parametro y un salto de linea
+;	Recibe 2 parametros de entrada:
+;		%1 es la direccion del texto a imprimir
+;		%2 es la cantidad de bytes a imprimir
+;-----------------------------------------------------------------------
+%macro impr_linea 2 	;recibe 2 parametros
+	mov rax,1	;sys_write
+	mov rdi,1	;std_out
+	mov rsi,%1	;primer parametro: Texto
+	mov rdx,%2	;segundo parametro: Tamano texto
+	syscall
+  mov rax,1	;sys_write
+	mov rdi,1	;std_out
+	mov rsi,cons_nueva_linea	;primer parametro: Texto
+	mov rdx,1	;segundo parametro: Tamano texto
+	syscall
+%endmacro:
+;------------------------- FIN DE MACRO --------------------------------
+
+;-------------------------  MACRO #3  ----------------------------------
+%macro trad 3 	;recibe q parametros (binario 16bits)
+	lea ebx,%3
+	;Ahora, en AL se carga el nibble que deseamos buscar en la tabla y se hace el lookup
+	mov rax,%1
+	xlat
+	;El resultado se guarda en "out"
+	mov [%2],ax
+%endmacro
+;------------------------- FIN DE MACRO --------------------------------
+;---------------- MACRO #4 ------------------------------
+%macro impr_deci 0
+	xor r8,r8
+	xor r10,r10
+	xor r12,r12
+	%%comp:
+	cmp r13,1000
+	jge %%mil
+	cmp r13,100
+	jge %%cent
+	cmp r13,10
+	jge %%dece
+
+	add r8,48
+	add r10,48
+	add r12,48
+	add r13,48
+	mov [dato],r8
+	impr_texto dato,1
+	mov [dato],r10
+	impr_texto dato,1
+	mov [dato],r12
+	impr_texto dato,1
+	mov [dato],r13
+	impr_texto dato,1
+	impr_texto cons_s,cons_tam_s
+
+
+
+	jmp %%end
+
+
+ %%mil:
+ 	add r8, 0x1
+ 	sub r13,1000
+ 	jmp %%comp
+
+	%%cent:
+	add r10,0x1
+  sub r13,100
+  jmp %%comp
+
+	%%dece:
+	add r12,0x1
+  sub r13,10
+  jmp %%comp
+
+	%%end:
+%endmacro
+
+section .data
+	fichero: db 'Monitor_rendimiento.txt',0
+  cons_header: db 'Tiempo de monitoreo en minutos (0-9):'
+  cons_tam_header: equ $-cons_header
+	cons_retro_1: db 'Monitoreando... '
+	cons_tam_retro_1: equ $-cons_retro_1
+	cons_retro_2: db 'Fin del Programa'
+	cons_tam_retro_2: equ $-cons_retro_2
+	cons_retro_3: db ' '
+	cons_tam_retro_3: equ $-cons_retro_3
+	cons_nueva_linea: db 0xa
+	cuenta_ascii: db''
+	cons_tam_cuenta_ascii: equ $-cuenta_ascii
+	cons_cpu1m: db 'Carga: '
+  cons_tam_cpu1m: equ $-cons_cpu1m
+  tabla: db "0123456789ABCDEF",0
+	cons_hex_header: db ' 0x'
+  cons_tam_hex_header: equ $-cons_hex_header
+	cons_s: db '/'
+	cons_tam_s: equ $-cons_s
+	cons_tec: db '			Tecnológico de Costa Rica'
+	cons_tam_tec: equ $-cons_tec
+	cons_curso: db '	EL-4313 Laboratorio de Estructuras y Microprocesadores'
+	cons_tam_curso: equ $-cons_curso
+	cons_nombres: db '	 Arias G.	Benavides Y.	Lee K.	 Varela B.'
+	cons_tam_nombres: equ $-cons_nombres
+
+
+
+section .bss
+			reglon: resb 48
+			out: resb 1
+			valor_max: resb 5
+			valor_loop: resb 15
+			fecha: resb 15
+			dato: resb 1
+			resultado: resb 32
+			year: resb 2
+			mes: resb 2
+			dias: resb 2
+			hora: resb 2
+			min: resb 2
+			man: resb 1
+			;Estructura para hacer una espera
+			tiempo_espera:
+				tv_sec: resq 1 ;Cantidad de espera en segundos
+				tv_nsec: resq 9 ;cantidad de espera en nanosegundos
+
+
+section .text
+  global _start
+
+_start:
+	;Primero se imprime el encabezado
+	impr_linea cons_tec,cons_tam_tec
+  impr_linea cons_curso,cons_tam_curso
+  impr_linea cons_nombres,cons_tam_nombres
+	impr_texto cons_header,cons_tam_header
+	;Ahora se captura 1 teclazo
+	mov rax,0
+	mov rdi,0
+	mov rsi, valor_max
+	mov rdx,1 ;Solamente se captura un teclazo
+	syscall
+	_breakk:
+	;Se retorna al usuario el valor ingresado
+	impr_texto cons_retro_1,cons_tam_retro_1
+	impr_linea valor_max,2
+	mov r15, [valor_max]
+	sub r15, 0x30
+	mov r14,0X6
+
+;-----------------------CREA archivo------------------
+		mov eax, 8
+		mov ebx, fichero
+		mov ecx, 0777o
+		int 0x80
+		mov [man],eax
+
+;----------------LOOP----------------------
+
+	_inicio:
+	;----------------------tiempo de espera------------------
+			xor r11, r11
+			mov r11,9
+			mov [tv_sec],r11
+			xor r10,r10
+			mov r10,900000000
+			mov [tv_nsec],r10
+			mov rax,0x23 ;syscall
+			mov rdi,tiempo_espera
+			xor rsi,rsi
+			_breakt:
+			syscall
+
+;--------------------------fecha------------------
+
+mov rdi,fecha
+mov rax,0x60
+syscall
+
+
+mov r9,[fecha]
+mov rax,r9
+_break55:
+mov r11,0x7B2
+mov edx,0x0
+mov r12,0x01E1853E ;constante años
+div r12
+mov r13,rax
+mov [year],r13
+add r13,r11
+impr_deci
+mov [reglon],r8
+mov [reglon+1],r10
+mov [reglon+2],r12
+mov [reglon+3],r13
+mov r11,0x2F
+mov [reglon+4],r11
+_break33:
+mov r13,r9
+mov rax,[year]
+mov r12,0x1E1853E
+mul r12
+sub r13,rax
+mov rax,r13
+mov edx,0x0
+mov r12,0x28206F ;constante meses
+div r12
+mov r13,rax
+mov [mes],r13
+add r13,0x1
+impr_deci
+mov [reglon+5],r8
+mov [reglon+6],r10
+mov [reglon+7],r12
+mov [reglon+8],r13
+mov r11,0x2F
+mov [reglon+9],r11
+_break44:
+mov r13,r9
+mov rax,[year]
+and rax,0xFF
+mov r12,0x1E1853E ;resto los años
+mul r12
+sub r13,rax
+mov rax,[mes]
+and rax,0xFF
+mov r12,0x28206F ;resto los dias
+mul r12
+sub r13,rax
+mov rax,r13
+mov edx,0x0
+mov r12,0x15180 ;constante dias
+div r12
+mov r13,rax
+mov [dias],r13
+;add r13,0x1
+impr_deci
+mov [reglon+10],r8
+mov [reglon+11],r10
+mov [reglon+12],r12
+mov [reglon+13],r13
+
+
+;-----------------------carga cpu 1 min------------------
+		mov rdi,resultado
+		mov rax,0x63 ;system sysinfo
+		syscall
+		mov r8,[resultado+8]
+		;---load en 1 min
+		mov r8,[resultado+8]
+		shr r8,28
+		and r8,0xF
+
+		trad r8,out,[tabla]
+		impr_texto cons_retro_3,cons_tam_retro_3
+		impr_texto cons_retro_3,cons_tam_retro_3
+		mov r11,0x20
+		mov [reglon+14],r11
+		mov [reglon+15],r11
+		mov r11,[cons_cpu1m]
+		mov [reglon+16],r11
+		impr_texto cons_hex_header,cons_tam_hex_header
+		mov r11,0x7830
+		mov [reglon+23],r11
+		impr_texto out,1
+		mov r8,[out]
+		mov [reglon+25],r8
+
+		mov r8,[resultado+8]
+		and r8,0xF000000
+		shr r8,24
+		trad r8,out,[tabla]
+		mov r8,[out]
+		mov [reglon+26],r8
+		impr_texto out,1
+
+		mov r8,[resultado+8]
+		and r8,0xF00000
+		shr r8,20
+		trad r8,out,[tabla]
+		mov r8,[out]
+		mov [reglon+27],r8
+		impr_texto out,1
+
+		mov r8,[resultado+8]
+		and r8,0xF0000
+		shr r8,16
+		trad r8,out,[tabla]
+		mov r8,[out]
+		mov [reglon+28],r8
+		impr_texto out,1
+
+		mov r8,[resultado+8]
+		and r8,0x0F000
+		shr r8,12
+		trad r8,out,[tabla]
+		mov r8,[out]
+		mov [reglon+29],r8
+		impr_texto out,1
+
+		mov r8,[resultado+8]
+		and r8,0x00F00
+		shr r8,8
+		trad r8,out,[tabla]
+		mov r8,[out]
+		mov [reglon+30],r8
+		impr_texto out,1
+
+		mov r8,[resultado+8]
+		and r8,0x000F0
+		shr r8,4
+		trad r8,out,[tabla]
+		impr_texto out,1
+		mov r8,[out]
+		mov [reglon+31],r8
+
+		mov r8,[resultado+8]
+		and r8,0x0000F
+		trad r8,out,[tabla]
+		mov r8,[out]
+		impr_linea out,1
+		mov [reglon+32],r8
+		_br:
+	;---fin de load
+
+
+	;------------------------escritura en archivo------------------
+	xor rax,rax
+	xor rcx,rcx
+	xor rbx,rbx
+	xor rdx,rdx
+
+	;---- Apertura---
+	mov eax, 5
+	mov ebx, fichero
+	mov ecx, 1
+	int 80h
+	mov [man],eax
+
+	;---- Escritura---
+	mov ebx, [man]
+	mov eax, 4
+	mov ecx, reglon
+	mov edx, 48
+	int 80h
+	;----Cerrar-------
+	mov ebx, [man]
+	mov eax,6
+	int 80h
+	;---------------------------------------------------------
+
+
+	;--------------------------------------------------------------
+
+
+	;-----------------------Condicion de salida------------------
+		sub r14, 0x1
+		_breakkkk:
+		cmp r14, 0x0
+		jz _monitor
+		jmp _inicio
+
+
+
+	_monitor:
+			mov r14,0x6
+			sub r15,0x1
+			_breakkk:
+			cmp r15,0x0
+			jz _finalizar_programa
+			jmp _inicio
+
+
+_finalizar_programa:
+	;Luego se retorna el control al sistema y se termina el programa
+	impr_linea cons_retro_2,cons_tam_retro_2
+
+  mov rax,60
+  mov rdi,0
+  syscall
+	impr_linea cons_retro_2,cons_tam_retro_2
